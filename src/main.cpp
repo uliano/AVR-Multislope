@@ -31,7 +31,7 @@ int main(void)
 		serial.print("\n");
 	}
 	init_pins();
-	ENABLE_CLR();
+	ENABLE::clear();
 	init_adc_clock();
 	init_ac0();
 	init_k_logic();
@@ -43,7 +43,7 @@ int main(void)
 	reset_counters();
 	start_counters();
 	start_modN();
-	ENABLE_SET();
+	ENABLE::set();
 	sei();
 
 	while (1)
@@ -58,7 +58,7 @@ int main(void)
 			serial.print(pos, 10);
 			serial.print("\n");
 		}
-		LED_TOGGLE();
+		LED::toggle();
 		_delay_ms(250);
 	}
 };

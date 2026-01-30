@@ -14,9 +14,7 @@
 #include "counters.h"
 
 ISR(USART2_RXC_vect) {
-	// DEBUG_TOGGLE;
 	serial.rxc();
-	// DEBUG_TOGGLE;
 }
 
 ISR(USART2_DRE_vect) {
@@ -29,7 +27,7 @@ ISR(TCB3_INT_vect)
 
 	PORTF.OUTTGL = PIN2_bm;  // Debug: toggle PF2 on each modN overflow
 
-	ENABLE_CLR();
+	ENABLE::clear();
 	stop_modN();
 	stop_counters();
 
@@ -50,7 +48,7 @@ ISR(TCB3_INT_vect)
 	reload_modN();
 	start_counters();
 	start_modN();
-	ENABLE_SET();
+	ENABLE::set();
 }
 
 ISR(TCB2_INT_vect)

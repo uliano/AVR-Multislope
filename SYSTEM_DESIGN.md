@@ -32,7 +32,6 @@ K (LUT2) selects WO1/WO2 -> LUT0 -> PA3 (MUX_OUT)
 ### System clock
 - External 24 MHz on PA0 when present.
 - Fallback to internal 24 MHz if external fails.
-- 32.768 kHz crystal on PF0/PF1 used for RTC when present.
 
 ### TCA0 (375 kHz)
 - PER = 63 -> 375 kHz from 24 MHz.
