@@ -10,5 +10,5 @@
 
 ## Pending
 - Full integrator hardware test
-- ADC differential measurement (PD1/PD4) integration
+- ADC differential measurement (PD2/PD0) integration
 - End-to-end multislope measurement

@@ -41,11 +41,11 @@
 // PC4 (OUTPUT PP)  TCB2 overflow debug (GPIO toggle)
 
 // PORT D
-// PD0 (ANALOG IN)  VREF (AC0 negative input)
-// PD1 (ANALOG IN)  ADC+ (AIN1)
-// PD2 (ANALOG IN)  VC (AC0 positive input)
+// PD0 (ANALOG IN)  VREF (AC0 negative input, ADC-)
+// PD1 (ANALOG IN)  free (unused)
+// PD2 (ANALOG IN)  VC (AC0 positive input, ADC+)
 // PD3 (OUTPUT PP)  K (CCL LUT2 output, debug)
-// PD4 (ANALOG IN)  ADC- (AIN4)
+// PD4 (ANALOG IN)  free (unused)
 
 
 
@@ -68,8 +68,9 @@
 
 
 
-// Pin configuration table - Add your pins here
-// Format: PIN_DEF(name, port, pin_number)
+/* Pin configuration table - Add your pins here
+/* Format: PIN_DEF(name, port, pin_number) 
+/*/
 #define PIN_TABLE \
     PIN_DEF(TICK,  E, 1) \
     PIN_DEF(DEBUG, E, 2) \

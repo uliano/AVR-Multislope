@@ -37,7 +37,7 @@ int main(void)
 	init_k_logic();
 	init_counters();
 	init_modN();
-	setup_modN(200000);
+	setup_modN(7500);
 
 	stop_counters();
 	reset_counters();

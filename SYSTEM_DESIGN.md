@@ -5,7 +5,7 @@ This document describes the current, working hardware logic and timing for the A
 ## Overview
 
 - MCU: AVR128DA48, bare metal
-- Core clock: 24 MHz (external on PA0 when available, fallback to internal)
+- Core clock: 24 MHz external on PA0
 - ADC clock: 375 kHz from TCA0 (WO0 on PC0)
 - Comparator: AC0 (PD2 vs PD0)
 - Logic: CCL LUTs used for K sync, ENABLE sync, PWM mux, gated clock
@@ -132,10 +132,10 @@ PORT C
 
 PORT D
 - PD0: VREF (AC0 AINN1)
-- PD1: ADC+ (AIN1, not used yet)
-- PD2: VC (AC0 AINP0)
+- PD1: free (unused)
+- PD2: VC (AC0 AINP0, ADC+)
 - PD3: K (LUT2 output)
-- PD4: ADC- (AIN4, not used yet)
+- PD4: free (unused)
 
 PORT F
 - PF2: LOOP debug (TCB3 ISR toggle)

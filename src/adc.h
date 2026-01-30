@@ -17,9 +17,9 @@ static inline void adc_init(void)
     ADC0.CTRLA = 0;
 
     // 2) disable digital input buffer on ADC pins (power/noise)
-    // PD1 = AIN1, PD4 = AIN4
-    PORTD.PIN1CTRL = (PORTD.PIN1CTRL & ~PORT_ISC_gm) | PORT_ISC_INPUT_DISABLE_gc;
-    PORTD.PIN4CTRL = (PORTD.PIN4CTRL & ~PORT_ISC_gm) | PORT_ISC_INPUT_DISABLE_gc;
+    // PD2 = AIN2 (ADC+), PD0 = AIN0 (ADC-), same as AC0 inputs
+    PORTD.PIN2CTRL = (PORTD.PIN2CTRL & ~PORT_ISC_gm) | PORT_ISC_INPUT_DISABLE_gc;
+    PORTD.PIN0CTRL = (PORTD.PIN0CTRL & ~PORT_ISC_gm) | PORT_ISC_INPUT_DISABLE_gc;
 
     // 3) mode: differential, 12-bit, no free-run
     // CTRLA: CONVMODE=DIFF, RESSEL=12bit (0), ENABLE lo mettiamo alla fine
@@ -33,9 +33,9 @@ static inline void adc_init(void)
     // Il nome esatto dell'enum dipende dall'header; spesso è ADC_PRESC_DIV12_gc.
     ADC0.CTRLC = ADC_PRESC_DIV12_gc; 
 
-    // 6) input selection: PD1(AIN1) as +, PD4(AIN4) as -
-    ADC0.MUXPOS = 1;  // AIN1
-    ADC0.MUXNEG = 4;  // AIN4
+    // 6) input selection: PD2(AIN2) as +, PD0(AIN0) as -
+    ADC0.MUXPOS = ADC_MUXPOS_AIN2_gc;
+    ADC0.MUXNEG = ADC_MUXNEG_AIN0_gc;
 
     // 7) interrupt on result ready
     ADC0.INTCTRL  = ADC_RESRDY_bm; 

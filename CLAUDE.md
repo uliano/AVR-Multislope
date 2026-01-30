@@ -88,8 +88,8 @@ PORT C
 - PC4: debug toggle (TCB2 ISR)
 
 PORT D
-- PD0: VREF (AC0 AINN1)
-- PD2: VC (AC0 AINP0)
+- PD0: VREF (AC0 AINN1, ADC-)
+- PD2: VC (AC0 AINP0, ADC+)
 - PD3: K (LUT2 output)
 
 PORT F
