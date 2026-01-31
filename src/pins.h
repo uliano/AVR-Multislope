@@ -17,10 +17,10 @@
 #include <avr/io.h>
 
 // Template for GPIO pin control
-// ActiveLow: when true, set() drives LOW, clear() drives HIGH (for active-low signals)
 // Uses VPORT for single-cycle SBI/CBI instructions on set/clear/read
 // Uses PORT for atomic OUTTGL/DIRSET/DIRCLR operations
-template<char PortLetter, uint8_t PinNum, bool ActiveLow = false>
+// Use invert(true) for active-low signals (hardware inversion via INVEN)
+template<char PortLetter, uint8_t PinNum>
 struct Pin {
     static_assert(PortLetter >= 'A' && PortLetter <= 'F', "Invalid port");
     static_assert(PinNum <= 7, "Invalid pin number");
@@ -47,24 +47,39 @@ struct Pin {
         else return VPORTF;
     }
 
+    // Access PINnCTRL register for this pin
+    static volatile uint8_t& pinctrl() {
+        return (&port().PIN0CTRL)[PinNum];
+    }
+
+    // Basic I/O
     static void toggle() { port().OUTTGL = mask; }
-
-    static void set() {
-        if constexpr (ActiveLow) vport().OUT &= ~mask;
-        else vport().OUT |= mask;
-    }
-
-    static void clear() {
-        if constexpr (ActiveLow) vport().OUT |= mask;
-        else vport().OUT &= ~mask;
-    }
-
+    static void set()    { vport().OUT |= mask; }
+    static void clear()  { vport().OUT &= ~mask; }
     static void output() { port().DIRSET = mask; }
     static void input()  { port().DIRCLR = mask; }
+    static bool read()   { return vport().IN & mask; }
 
-    static bool read() {
-        if constexpr (ActiveLow) return !(vport().IN & mask);
-        else return vport().IN & mask;
+    // Hardware inversion (INVEN) - inverts both input and output
+    static void invert(bool enable) {
+        if (enable) pinctrl() |= PORT_INVEN_bm;
+        else pinctrl() &= ~PORT_INVEN_bm;
+    }
+
+    // Internal pull-up (only effective when pin is input)
+    static void pullup(bool enable) {
+        if (enable) pinctrl() |= PORT_PULLUPEN_bm;
+        else pinctrl() &= ~PORT_PULLUPEN_bm;
+    }
+
+    // Disable digital input buffer (saves power for analog pins)
+    static void disableDigitalInput() {
+        pinctrl() = (pinctrl() & ~PORT_ISC_gm) | PORT_ISC_INPUT_DISABLE_gc;
+    }
+
+    // Enable digital input buffer (default state)
+    static void enableDigitalInput() {
+        pinctrl() = (pinctrl() & ~PORT_ISC_gm) | PORT_ISC_INTDISABLE_gc;
     }
 };
 
