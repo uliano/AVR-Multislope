@@ -13,6 +13,7 @@
 #include "clocks.h"
 #include "switching.h"
 #include "counters.h"
+#include "tca0.h"
 
 int main(void)
 {
@@ -31,35 +32,33 @@ int main(void)
 		serial.print("\n");
 	}
 	init_pins();
-	ENABLE::clear();
 	init_adc_clock();
-	init_ac0();
-	init_k_logic();
-	init_counters();
+	init_ac1();
+	init_luts();
 	init_modN();
+	init_positive();
 	setup_modN(7500);
-
-	stop_counters();
-	reset_counters();
-	start_counters();
-	start_modN();
-	ENABLE::set();
+	reset_positive();
 	sei();
+	ENABLE::set();
+	start_adc_clock();
 
 	while (1)
 	{
+
+		
 		if (window_ready) {
-			uint8_t sreg = SREG;
-			cli();
-			uint32_t pos = window_positive;
 			window_ready = 0;
-			SREG = sreg;
 			serial.print("POS=");
-			serial.print(pos, 10);
+			serial.print(window_positive, 10);
 			serial.print("\n");
+			reload_modN();
+			read_positive;
+			ENABLE::set();
+			start_adc_clock();
+
 		}
 		LED::toggle();
-		_delay_ms(250);
 	}
 };
 
