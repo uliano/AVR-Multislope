@@ -12,4 +12,11 @@
 extern Uart<2, UART_ALTERNATE> serial;	
 
 extern volatile uint8_t window_ready;
-extern volatile uint32_t window_positive;
+
+union WindowPositive {
+    uint32_t value;
+    uint16_t words[2];
+    uint8_t bytes[4];
+};
+
+extern volatile WindowPositive window_positive;

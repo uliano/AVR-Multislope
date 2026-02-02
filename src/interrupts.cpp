@@ -25,11 +25,14 @@ ISR(TCB3_INT_vect)
 {
 	ENABLE::clear();
 	stop_adc_clock();
-	TCB3.INTFLAGS = TCB_OVF_bm;  // Acknowledge overflow
+	// first thing capture LSB of TCB0 before it can increment
+	window_positive.bytes[0] = TCB0.CNTL;
+	// then other bytes
+	window_positive.bytes[1] = TCB0.CNTH;
+	window_positive.bytes[2] = TCB1.CNTL;
+	TCB3.INTFLAGS = TCB_CAPT_bm;  // Acknowledge overflow
 
-	window_positive = read_positive();
 	window_ready = 1;
 	
-	reload_modN();
 	reset_positive();
 }

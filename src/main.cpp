@@ -35,9 +35,8 @@ int main(void)
 	init_adc_clock();
 	init_ac1();
 	init_luts();
-	init_modN();
+	init_modN(7500);
 	init_positive();
-	setup_modN(7500);
 	reset_positive();
 	sei();
 	ENABLE::set();
@@ -48,17 +47,28 @@ int main(void)
 
 		
 		if (window_ready) {
-			window_ready = 0;
-			serial.print("POS=");
-			serial.print(window_positive, 10);
-			serial.print("\n");
-			reload_modN();
-			read_positive;
+			DEBUG::set();
+			DEBUG::clear();
 			ENABLE::set();
+			window_ready = 0;
 			start_adc_clock();
+			serial.print("POS=");
+			serial.print(window_positive.value, 10);
+			serial.print("\n");
+
+			// serial.print("TCB2CMP=");
+			// serial.print(TCB2.CCMP,10);
+			// serial.print("\n");
+			// serial.print("TCB3CMP=");
+			// serial.print(TCB3.CCMP,10);
+			// serial.print("\n");
+
+			
+			// ENABLE::set();
+			// start_adc_clock();
 
 		}
-		LED::toggle();
+
 	}
 };
 

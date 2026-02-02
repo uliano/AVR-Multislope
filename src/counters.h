@@ -28,49 +28,32 @@
  * period measurement or event windowing.
  */
 
-// Pre-calculated initial values for modN counter (set by setup_modN)
-static volatile uint16_t modN_init_lo;  // LSW of (0 - N)
-static volatile uint16_t modN_init_hi;  // MSW of (0 - N)
 
-static inline void init_modN(void)
+
+static inline void init_modN(uint32_t period)
 {
     TCB2.CTRLA = 0;  // Stop TCB2 (LSW)
     TCB3.CTRLA = 0;  // Stop TCB3 (MSW)
 
-    // Configure TCB2 for event counting (will trigger TCB3 on overflow via event system)
+    // Configure TCB2 for event counting (will trigger TCB3 on compare via event system)
+    TCB2.CNT = 0;
+    TCB2.CCMP = 49;  // the sampling period is multiple of 50
     TCB2.CTRLB = 0;  // No special mode needed, just count events
     TCB2.EVCTRL = TCB_CAPTEI_bm;  // Ensure event input is edge-qualified
     TCB2.INTCTRL  = 0;  // No interrupts
     TCB2.CTRLA = (0x7 << 1) | TCB_ENABLE_bm;  // Event mode + Enable LSW
 
     // Configure TCB3 to count TCB2 overflows via event system
+    TCB3.CNT = 0;
+    TCB3.CCMP = static_cast<uint16_t>( (period / 50 - 1) & 0xFFFF); // 50 * 1500 = 75000 = 10 PLC
     TCB3.CTRLB = 0;  // No special mode needed
     TCB3.EVCTRL = TCB_CAPTEI_bm;  // Ensure event input is edge-qualified
-    TCB3.INTCTRL  = TCB_OVF_bm;  // Enable overflow interrupt on TCB3
-    TCB3.INTFLAGS = TCB_OVF_bm;  // Clear any pending interrupt
+    TCB3.INTCTRL  = TCB_CAPT_bm;  // Enable capture interrupt on TCB3
+    TCB3.INTFLAGS = TCB_CAPT_bm;  // Clear any pending interrupt
     TCB3.CTRLA = (0x7 << 1) | TCB_ENABLE_bm;  // Event mode + Enable MSW 
 
 }
 
-// Reload counter to initial value (0 - N)
-
-static inline void reload_modN(void)
-{
-    TCB2.CNT = modN_init_lo;        // Reload LSW
-    TCB3.CNT = modN_init_hi;        // Reload MSW
-}
-
-
-// Stores the initial value and loads the counter
-
-static inline void setup_modN(uint32_t N)
-{
-    uint32_t init = 0u - N;              // Two's complement: -N
-    modN_init_lo = (uint16_t)init;       // Lower 16 bits
-    modN_init_hi = (uint16_t)(init >> 16); // Upper 16 bits
-    reload_modN();
-
-}
 
 static inline void init_positive(void)
 {
@@ -91,16 +74,13 @@ static inline void init_positive(void)
 // Read 32-bit counter atomically WITHOUT disabling interrupts
 static inline uint32_t read_positive(void)
 {
-    uint16_t msb1, msb2;
+    uint8_t msb;
     uint16_t lsw;
 
-    do {
-        msb1 = TCB1.CNT;
-        lsw = TCB0.CNT;
-        msb2 = TCB1.CNT;
-    } while (msb1 != msb2);  // Repeat if overflow occurred during read
 
-    return ((uint32_t)msb2 << 16) | lsw;
+    msb = TCB1.CNTL;
+    lsw = TCB0.CNT;
+    return ((uint32_t)msb << 16) | lsw;
 }
 
 
