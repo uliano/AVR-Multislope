@@ -63,6 +63,7 @@ static inline void init_luts(void)
     EVSYS.USERCCLLUT0A = (uint8_t)(CH_AC_SYNC + 1u);
     EVSYS.USERCCLLUT1A = (uint8_t)(CH_AC_SYNC + 1u); 
     EVSYS.USERCCLLUT2A = (uint8_t)(CH_TCA_OVF + 1u);  // Feeds the DFF clk
+    EVSYS.USERCCLLUT4A = (uint8_t)(CH_AC_SYNC + 1u);
 
     EVSYS.USERTCB0COUNT = (uint8_t)(CH_POS_CLK + 1u);
     EVSYS.USERTCB1COUNT = (uint8_t)(CH_POS_OVF + 1u);
@@ -73,12 +74,20 @@ static inline void init_luts(void)
     CCL.CTRLA = 0;
 
     // LUT0: MUX between WO1 and WO2 based on K (IN0)
-    // IN0 = EVENTA (K), IN1 = TCA0 WO1, IN2 = TCA0 WO2
+    // IN0 = EVENTA (AC_SYNC), IN1 = TCA0 WO1, IN2 = TCA0 WO2
     CCL.SEQCTRL0 = CCL_SEQSEL_DISABLE_gc;
     CCL.LUT0CTRLB = CCL_INSEL0_EVENTA_gc | CCL_INSEL1_TCA0_gc; // AC_SYNC; WO1
     CCL.LUT0CTRLC = CCL_INSEL2_TCA0_gc; // WO2
     CCL.TRUTH0 = 0xD8;// 0xE4; // 0xD8;  // OUT = IN0 ? IN1 : IN2
     CCL.LUT0CTRLA = CCL_OUTEN_bm | CCL_ENABLE_bm;  // Output on PA3
+
+    // LUT5: MUX between WO1 and WO2 based on K (IN0)
+    // IN0 = EVENTA (AC_SYNC), IN1 = TCA0 WO1, IN2 = TCA0 WO2
+    CCL.SEQCTRL2 = CCL_SEQSEL_DISABLE_gc;
+    CCL.LUT4CTRLB = CCL_INSEL0_EVENTA_gc | CCL_INSEL1_TCA0_gc; // AC_SYNC; WO1
+    CCL.LUT4CTRLC = CCL_INSEL2_TCA0_gc; // WO2
+    CCL.TRUTH4 = 0xE4;// 0xE4; // 0xD8;  // OUT = IN0 ? IN1 : IN2
+    CCL.LUT4CTRLA = CCL_OUTEN_bm | CCL_ENABLE_bm;  // Output on PB3
 
     // LUT1: positive clock = ACS & TCA0 WO0 (debug on PC3)
     // IN0 = TCA0 WO0, IN1 = EVENTA (ENABLE_SYNC), IN2 masked (0)
