@@ -78,7 +78,7 @@ static inline void init_luts(void)
     CCL.SEQCTRL0 = CCL_SEQSEL_DISABLE_gc;
     CCL.LUT0CTRLB = CCL_INSEL0_EVENTA_gc | CCL_INSEL1_TCA0_gc; // AC_SYNC; WO1
     CCL.LUT0CTRLC = CCL_INSEL2_TCA0_gc; // WO2
-    CCL.TRUTH0 = 0xD8;// 0xE4; // 0xD8;  // OUT = IN0 ? IN1 : IN2
+    CCL.TRUTH0 = 0xD8;//0xD8;// 0xE4; // 0xD8;  // OUT = IN0 ? IN1 : IN2
     CCL.LUT0CTRLA = CCL_OUTEN_bm | CCL_ENABLE_bm;  // Output on PA3
 
     // LUT5: MUX between WO1 and WO2 based on K (IN0)
@@ -86,7 +86,7 @@ static inline void init_luts(void)
     CCL.SEQCTRL2 = CCL_SEQSEL_DISABLE_gc;
     CCL.LUT4CTRLB = CCL_INSEL0_EVENTA_gc | CCL_INSEL1_TCA0_gc; // AC_SYNC; WO1
     CCL.LUT4CTRLC = CCL_INSEL2_TCA0_gc; // WO2
-    CCL.TRUTH4 = 0xE4;// 0xE4; // 0xD8;  // OUT = IN0 ? IN1 : IN2
+    CCL.TRUTH4 = 0xD8;// 0xE4; // 0xD8;  // OUT = IN0 ? IN1 : IN2
     CCL.LUT4CTRLA = CCL_OUTEN_bm | CCL_ENABLE_bm;  // Output on PB3
 
     // LUT1: positive clock = ACS & TCA0 WO0 (debug on PC3)

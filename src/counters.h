@@ -30,7 +30,7 @@
 
 
 
-static inline void init_modN(uint32_t period)
+static inline void init_modN(uint16_t period)
 {
     TCB2.CTRLA = 0;  // Stop TCB2 (LSW)
     TCB3.CTRLA = 0;  // Stop TCB3 (MSW)
@@ -40,7 +40,8 @@ static inline void init_modN(uint32_t period)
     TCB2.CCMP = 49;  // the sampling period is multiple of 50
     TCB2.CTRLB = 0;  // No special mode needed, just count events
     TCB2.EVCTRL = TCB_CAPTEI_bm;  // Ensure event input is edge-qualified
-    TCB2.INTCTRL  = 0;  // No interrupts
+    TCB2.INTCTRL  = 0;  // Disable capture interrupt on TCB2
+    TCB2.INTFLAGS = TCB_CAPT_bm;  // Clear any pending interrupt
     TCB2.CTRLA = (0x7 << 1) | TCB_ENABLE_bm;  // Event mode + Enable LSW
 
     // Configure TCB3 to count TCB2 overflows via event system
@@ -78,9 +79,9 @@ static inline uint32_t read_positive(void)
     uint16_t lsw;
 
 
-    msb = TCB1.CNTL;
-    lsw = TCB0.CNT;
-    return ((uint32_t)msb << 16) | lsw;
+   msb = TCB1.CNTL;
+   // return TCB0.CNT;
+   return ((uint32_t)msb << 16) | lsw;
 }
 
 
@@ -88,7 +89,7 @@ static inline uint32_t read_positive(void)
 static inline void reset_positive(void)
 {
     TCB0.CNT = 0;
-    TCB1.CNT = 0;
+    TCB1.CNTL = 0;
 }
 
 

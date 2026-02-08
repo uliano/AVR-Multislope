@@ -23,16 +23,23 @@ ISR(USART2_DRE_vect) {
 
 ISR(TCB3_INT_vect)
 {
+	
 	ENABLE::clear();
 	stop_adc_clock();
 	// first thing capture LSB of TCB0 before it can increment
-	window_positive.bytes[0] = TCB0.CNTL;
-	// then other bytes
-	window_positive.bytes[1] = TCB0.CNTH;
+	window_positive.words[0] = TCB0.CNT;
+
+	TCB0.CNT = 0;
 	window_positive.bytes[2] = TCB1.CNTL;
+	TCB1.CNTL = 0;
+
 	TCB3.INTFLAGS = TCB_CAPT_bm;  // Acknowledge overflow
 
 	window_ready = 1;
+	start_adc_clock();
+	ENABLE::set();
+
 	
-	reset_positive();
+	
+	// reset_positive();
 }

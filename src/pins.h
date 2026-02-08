@@ -12,11 +12,13 @@
 #include <pin.hpp>
 
 using ENABLE        = Pin<'A', 2>; // to control the 4053 state, Inverted logic
-using PWM_OUT       = Pin<'A', 3>; // selected PWM for 4053 switches
+using PWM_POS       = Pin<'A', 3>; // selected PWM for 4053 switches
+using PWM_NEG       = Pin<'B', 3>; // PWM negative switch
 
 using CLK_ADC       = Pin<'C', 0>; // for debug only
-using PWM1_ADC      = Pin<'C', 1>; // for debug only
-using PWM2_ADC      = Pin<'C', 2>; // for debug only
+using WO1           = Pin<'C', 1>; // for debug only
+using WO2           = Pin<'C', 2>; // for debug only
+using NEG_CLK       = Pin<'C', 3>; // for debug only
 
 // PD0 may not be avaliable on AVRxxDB
 
@@ -37,11 +39,13 @@ static inline void init_pins(void) {
     ENABLE::output();
     ENABLE::invert(true);
     ENABLE::clear();
-    PWM_OUT::output();
+    PWM_POS::output();
+    PWM_NEG::output();
 
     CLK_ADC::output();
-    PWM1_ADC::output();
-    PWM2_ADC::output();
+    WO1::output();
+    WO2::output();
+    NEG_CLK::output();
 
     POS_INP::disableDigitalInput();
     AC_SYNC::output();
@@ -52,6 +56,7 @@ static inline void init_pins(void) {
 
     // limit slew rate on all pins
     PORTA.PORTCTRL |= PORT_SRL_bm;
+    PORTB.PORTCTRL |= PORT_SRL_bm;
     PORTC.PORTCTRL |= PORT_SRL_bm;
     PORTD.PORTCTRL |= PORT_SRL_bm;
 }

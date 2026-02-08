@@ -47,12 +47,11 @@ int main(void)
 
 		
 		if (window_ready) {
-			DEBUG::set();
-			DEBUG::clear();
-			ENABLE::set();
+			// DEBUG::set();
+			// DEBUG::clear();
 			window_ready = 0;
-			start_adc_clock();
-			serial.print("POS=");
+			//start_adc_clock();
+			serial.print("NEG=");
 			serial.print(window_positive.value, 10);
 			serial.print("\n");
 

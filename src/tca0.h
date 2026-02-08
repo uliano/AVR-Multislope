@@ -17,8 +17,8 @@ static inline void init_adc_clock()
     TCA0.SINGLE.CTRLA = 0;  // Disable during configuration
     TCA0.SINGLE.PER = 63;   // 64 clock cycles = 375 kHz
     TCA0.SINGLE.CMP0 = 31;  // ~50% duty on WO0 (PC0)
-    TCA0.SINGLE.CMP1 = 3;   // ~1/8 duty on WO1 (PC1)
-    TCA0.SINGLE.CMP2 = 61;  // ~7/8 duty on WO2 (PC2)
+    TCA0.SINGLE.CMP1 = 7;   // ~1/8 duty on WO1 (PC1)
+    TCA0.SINGLE.CMP2 = 55;  // ~7/8 duty on WO2 (PC2)
     TCA0.SINGLE.CTRLB = TCA_SINGLE_CMP0EN_bm
         | TCA_SINGLE_CMP1EN_bm
         | TCA_SINGLE_CMP2EN_bm
@@ -37,3 +37,4 @@ static inline void stop_adc_clock() {
 static inline void set_adc_clock(uint8_t value) {
     TCA0.SINGLE.CNTL = value;
 }
+
