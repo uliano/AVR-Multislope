@@ -30,7 +30,7 @@
 
 
 
-static inline void init_modN(uint16_t period)
+static inline void init_window_counter(uint16_t period)
 {
     TCB2.CTRLA = 0;  // Stop TCB2 (LSW)
     TCB3.CTRLA = 0;  // Stop TCB3 (MSW)
@@ -53,43 +53,6 @@ static inline void init_modN(uint16_t period)
     TCB3.INTFLAGS = TCB_CAPT_bm;  // Clear any pending interrupt
     TCB3.CTRLA = (0x7 << 1) | TCB_ENABLE_bm;  // Event mode + Enable MSW 
 
-}
-
-
-static inline void init_positive(void)
-{
-    // TCB0 counts events on CH_POS (positive pulses)
-    TCB0.CNT = 0;
-    TCB0.EVCTRL = TCB_CAPTEI_bm;
-    TCB0.INTCTRL = 0;  // No ISR; MSW handled by TCB1 via EVSYS
-    TCB0.CTRLA = (0x7 << 1) | TCB_ENABLE_bm;  // EVENT + ENABLE
-
-    // TCB1 counts TCB0 overflows on CH_POS_OVF
-    TCB1.CNT = 0;
-    TCB1.EVCTRL = TCB_CAPTEI_bm;
-    TCB1.INTCTRL = 0;  // No ISR
-    TCB1.CTRLA = (0x7 << 1) | TCB_ENABLE_bm;  // EVENT + ENABLE
-}
-
-
-// Read 32-bit counter atomically WITHOUT disabling interrupts
-static inline uint32_t read_positive(void)
-{
-    uint8_t msb;
-    uint16_t lsw;
-
-
-   msb = TCB1.CNTL;
-   // return TCB0.CNT;
-   return ((uint32_t)msb << 16) | lsw;
-}
-
-
-
-static inline void reset_positive(void)
-{
-    TCB0.CNT = 0;
-    TCB1.CNTL = 0;
 }
 
 

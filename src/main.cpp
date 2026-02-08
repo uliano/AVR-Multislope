@@ -12,7 +12,8 @@
 #include "pins.h"
 #include "clocks.h"
 #include "switching.h"
-#include "counters.h"
+#include "window_counter.h"
+#include "negative_counter.h"
 #include "tca0.h"
 
 int main(void)
@@ -35,9 +36,9 @@ int main(void)
 	init_adc_clock();
 	init_ac1();
 	init_luts();
-	init_modN(7500);
-	init_positive();
-	reset_positive();
+	init_window_counter(7500);
+	init_negative();
+	reset_negative();
 	sei();
 	ENABLE::set();
 	start_adc_clock();
