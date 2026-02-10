@@ -11,7 +11,9 @@
 #include "globals.h"
 #include "pins.h"
 #include "clocks.h"
-#include "switching.h"
+#include "luts.h"
+#include "events.h"
+#include "comparator.h"
 #include "window_counter.h"
 #include "negative_counter.h"
 #include "tca0.h"
@@ -37,8 +39,7 @@ int main(void)
 	init_ac1();
 	init_luts();
 	init_window_counter(7500);
-	init_negative();
-	reset_negative();
+	init_negative_counter();
 	sei();
 	ENABLE::set();
 	start_adc_clock();
@@ -53,7 +54,7 @@ int main(void)
 			window_ready = 0;
 			//start_adc_clock();
 			serial.print("NEG=");
-			serial.print(window_positive.value, 10);
+			serial.print(negative_counts.value, 10);
 			serial.print("\n");
 
 			// serial.print("TCB2CMP=");

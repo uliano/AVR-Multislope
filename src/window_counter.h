@@ -17,41 +17,48 @@
  * 32-bit Modulo-N Event Counter using cascaded TCB2+TCB3
  *
  * Implements a hardware event counter that generates an overflow interrupt
- * after exactly N events. Uses two 16-bit TCB timers in cascade mode to
- * create a 32-bit counter.
+ * after exactly N events. 
  *
  * Architecture:
  *   Event -> TCB2 (16-bit LSW) -> cascade -> TCB3 (16-bit MSW) -> Overflow IRQ
- *
- * The counter is initialized to (0 - N) so that after N events it reaches
- * 0x00000000, triggering the TCB3 overflow interrupt. This allows precise
- * period measurement or event windowing.
+ *   TCB2 counts up to 50, so the window counter period will be only in multiple of 50
+ * 
  */
 
 
 
+ 
+
 static inline void init_window_counter(uint16_t period)
 {
-    TCB2.CTRLA = 0;  // Stop TCB2 (LSW)
-    TCB3.CTRLA = 0;  // Stop TCB3 (MSW)
+    TCB2.CTRLA = 0;  // Stop TCB1 
 
-    // Configure TCB2 for event counting (will trigger TCB3 on compare via event system)
+    // Configure TCB2 for event counting (will trigger TCA0 on compare via event system)
     TCB2.CNT = 0;
-    TCB2.CCMP = 49;  // the sampling period is multiple of 50
-    TCB2.CTRLB = 0;  // No special mode needed, just count events
+    TCB2.CCMP = 24;  // the sampling period is multiple of 25
+    TCB2.CTRLB = 0;  // count events
     TCB2.EVCTRL = TCB_CAPTEI_bm;  // Ensure event input is edge-qualified
     TCB2.INTCTRL  = 0;  // Disable capture interrupt on TCB2
-    TCB2.INTFLAGS = TCB_CAPT_bm;  // Clear any pending interrupt
-    TCB2.CTRLA = (0x7 << 1) | TCB_ENABLE_bm;  // Event mode + Enable LSW
+    TCB2.CTRLA = TCB_CLKSEL_EVENT_gc  | TCB_ENABLE_bm;  // Event mode + Enable LSW
 
-    // Configure TCB3 to count TCB2 overflows via event system
-    TCB3.CNT = 0;
-    TCB3.CCMP = static_cast<uint16_t>( (period / 50 - 1) & 0xFFFF); // 50 * 1500 = 75000 = 10 PLC
-    TCB3.CTRLB = 0;  // No special mode needed
-    TCB3.EVCTRL = TCB_CAPTEI_bm;  // Ensure event input is edge-qualified
-    TCB3.INTCTRL  = TCB_CAPT_bm;  // Enable capture interrupt on TCB3
-    TCB3.INTFLAGS = TCB_CAPT_bm;  // Clear any pending interrupt
-    TCB3.CTRLA = (0x7 << 1) | TCB_ENABLE_bm;  // Event mode + Enable MSW 
+    // Configure TCA) to count TCB2 overflows via event system
+    TCA0.SINGLE.CTRLA = 0;  // Disable during configuration
+    uint16_t period = static_cast<uint16_t>( (period / 25 - 1) & 0xFFFF); // 25 * 3000 = 75000 = 10 PLC
+    TCA0.SINGLE.PER = period;
+
+    TCA0.SINGLE.CTRLB = TCA_SINGLE_CMP0EN_bm
+        | TCA_SINGLE_CMP1EN_bm
+        | TCA_SINGLE_CMP2EN_bm
+        | TCA_SINGLE_WGMODE_SINGLESLOPE_gc;
+    TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV1_gc ;
+
+    TCB2.CNT = 0;
+    TCB2.CCMP = static_cast<uint16_t>( (period / 25 - 1) & 0xFFFF); // 25 * 3000 = 75000 = 10 PLC
+    TCB2.CTRLB = 0;  // count events
+    TCB2.EVCTRL = TCB_CAPTEI_bm;  // Ensure event input is edge-qualified
+    TCB2.INTCTRL  = TCB_CAPT_bm;  // Enable capture interrupt on TCB3
+    TCB2.INTFLAGS = TCB_CAPT_bm;  // Clear any pending interrupt
+    TCB2.CTRLA = (0x7 << 1) | TCB_ENABLE_bm;  // Event mode + Enable MSW 
 
 }
 

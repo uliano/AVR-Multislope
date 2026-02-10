@@ -15,5 +15,5 @@ Uart<2, UART_ALTERNATE> serial(115200);  //static object initialized by construc
 // Ring<uint8_t, uint8_t, 8> commands;
 
 volatile uint8_t window_ready = 0;
-volatile WindowPositive window_positive = {0};
+volatile Word32 negative_counts = {0};
 
