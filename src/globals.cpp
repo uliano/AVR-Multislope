@@ -6,14 +6,20 @@
  *  Author: uliano
  * Revised: 01/9/2026 - Added modN period definition
  */ 
+#include "globals.hpp"
 
-#include <uart.hpp>
-#include "globals.h"
+Ring<Measurement, uint16_t, 1024> meas_buffer;
 
+WindowCounter window_counter(WindowLength::PLC_1, GridFrequency::FREQ_50HZ);  
+NegativeCounter negative_counter;
+Uart<2, UART_ALTERNATE> usb(430200);
+Uart<4, UART_STANDARD> console(115200);  // PE0/PE1
 
-Uart<2, UART_ALTERNATE> serial(115200);  //static object initialized by constructor
-// Ring<uint8_t, uint8_t, 8> commands;
-
-volatile uint8_t window_ready = 0;
-volatile Word32 negative_counts = {0};
+Globals global_data = {
+    .previous_charge = 0,
+    .charge_difference = 0,
+    .negative_counts = 0,
+    .status = Status::CLEAN
+};
+Globals *globals = &global_data;  
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Write fuses to AVR128DA48 using avrdude
+Write fuses to AVR128DB48 using avrdude
 Usage: python write_fuses.py [programmer] [port]
 Examples:
   python write_fuses.py serialupdi COM8
@@ -13,14 +13,14 @@ import sys
 # Avrdude paths
 AVRDUDE = "C:/Users/uliano/stuff/toolchains/avr-gcc-15.2.0/avr-gcc-15.2.0-x64-windows/bin/avrdude.exe"
 AVRDUDE_CONF = "C:/Users/uliano/stuff/toolchains/avr-gcc-15.2.0/avr-gcc-15.2.0-x64-windows/bin/avrdude.conf"
-MCU = "avr128da48"
+MCU = "avr128db48"
 
 # Fuse values (from platformio.ini)
 FUSES = {
     "fuse0": 0x00,  # WDTCFG - Watchdog disabled
     "fuse1": 0x00,  # BODCFG - BOD disabled
-    "fuse2": 0x02,  # OSCCFG - 24MHz internal oscillator
-    "fuse5": 0xC8,  # SYSCFG0 - EESAVE=no, RESET pin, no CRC
+    "fuse2": 0x00,  # OSCCFG - Internal HF oscillator (freq set at runtime)
+    "fuse5": 0xC8,  # SYSCFG0 - EESAVE=no, RESET pin, MVIO=off, no CRC
     "fuse6": 0x07,  # SYSCFG1 - 64ms startup time
     "fuse7": 0x00,  # CODESIZE - Full flash for application
     "fuse8": 0x00,  # BOOTSIZE - No bootloader section

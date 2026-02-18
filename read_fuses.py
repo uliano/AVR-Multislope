@@ -5,6 +5,7 @@ Usage: python read_fuses.py [programmer] [port]
 Examples:
   python read_fuses.py serialupdi COM8
   python read_fuses.py atmelice_updi
+  python read_fuses.py atmelice_updi
 """
 
 import subprocess
@@ -14,7 +15,7 @@ import re
 # Avrdude paths
 AVRDUDE = "C:/Users/uliano/stuff/toolchains/avr-gcc-15.2.0/avr-gcc-15.2.0-x64-windows/bin/avrdude.exe"
 AVRDUDE_CONF = "C:/Users/uliano/stuff/toolchains/avr-gcc-15.2.0/avr-gcc-15.2.0-x64-windows/bin/avrdude.conf"
-MCU = "avr128da48"
+MCU = "avr128db48"
 
 def read_fuse(programmer, port, fuse_num):
     """Read a single fuse value using avrdude"""
@@ -65,16 +66,16 @@ def decode_bodcfg(value):
     print(f"    Level: {levels[lvl]}")
 
 def decode_osccfg(value):
-    """Decode OSCCFG (fuse2)"""
-    oschffrq = value & 0x03
-    freqs = ["Reserved", "16MHz", "20MHz", "24MHz"]
+    """Decode OSCCFG (fuse2) - AVR128DB48"""
+    clksel = value & 0x01
     print(f"  OSCCFG (fuse2): 0x{value:02X}")
-    print(f"    OSCHF Frequency: {freqs[oschffrq]}")
+    print(f"    CLKSEL: {'External clock' if clksel else 'Internal high-frequency oscillator'}")
 
 def decode_syscfg0(value):
-    """Decode SYSCFG0 (fuse5)"""
+    """Decode SYSCFG0 (fuse5) - AVR128DB48"""
     eesave = (value >> 0) & 0x01
     rstpincfg = (value >> 2) & 0x03
+    mvio = (value >> 4) & 0x01
     crcsrc = (value >> 6) & 0x03
 
     rstmodes = ["GPIO", "Reserved", "RESET", "Reserved"]
@@ -83,6 +84,7 @@ def decode_syscfg0(value):
     print(f"  SYSCFG0 (fuse5): 0x{value:02X}")
     print(f"    EESAVE: {'Yes (preserved)' if eesave else 'No (erased)'}")
     print(f"    RESET pin: {rstmodes[rstpincfg]}")
+    print(f"    MVIO: {'Enabled (PORTC dual supply)' if mvio else 'Disabled'}")
     print(f"    CRC source: {crcsources[crcsrc]}")
 
 def decode_syscfg1(value):
@@ -115,7 +117,7 @@ def main():
     programmer = sys.argv[1] if len(sys.argv) > 1 else "serialupdi"
     port = sys.argv[2] if len(sys.argv) > 2 and "updi" not in sys.argv[2] else None
 
-    print(f"Reading fuses from AVR128DA48 using {programmer}" + (f" on {port}" if port else ""))
+    print(f"Reading fuses from AVR128DB48 using {programmer}" + (f" on {port}" if port else ""))
     print("=" * 60)
 
     # Read all fuses

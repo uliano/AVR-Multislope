@@ -67,38 +67,6 @@ python write_fuses.py
 - Firmware map file: .pio/build/Upload_UPDI/firmware.map
 - Disassembly listing: generated via generate_lst.py post-build script
 
-## Critical Pin Assignments (current)
-
-PORT A
-- PA0: external 24 MHz clock input (do not use as GPIO)
-- PA1: not usable on PCB
-- PA2: POS_EXT input (external AND output)
-- PA3: MUX_OUT (LUT0 output)
-
-PORT B
-- PB1: ENABLE (software output)
-- PB2: EVOUTB (gated clock pulses)
-- PB3: ENABLE_SYNC (LUT4 output)
-
-PORT C
-- PC0: CLK_ADC (TCA0 WO0, 375 kHz)
-- PC1: PWM1 (TCA0 WO1)
-- PC2: PWM2 (TCA0 WO2)
-- PC3: GATED_CLK (LUT1 output)
-- PC4: debug toggle (TCB2 ISR)
-
-PORT D
-- PD0: VREF (AC0 AINN1, ADC-)
-- PD2: VC (AC0 AINP0, ADC+)
-- PD3: K (LUT2 output)
-
-PORT F
-- PF2: ISR toggle (TCB3)
-- PF3: LED
-- PF4/PF5: UART TX/RX
-- PF0/PF1: 32 kHz crystal
-
-## Code Organization
 
 Core modules (src/):
 - main.cpp: main loop and serial logging
@@ -119,12 +87,5 @@ Libraries (lib/core/src/):
 ## Documentation
 
 - SYSTEM_DESIGN.md: current system design and signal flow
-- TESTING.md: test plan
-- TEST_STATUS.md: short status of verified items
 - avr_docs/: AVR128DA/DB peripheral reference and errata
 
-## Constraints and Gotchas
-
-- PA2 port interrupt must remain disabled (PORT_ISC_INTDISABLE_gc) or UART ISR can starve.
-- External AND is required to form POS_EXT (K AND gated clock) because LUTs are fully used.
-- PA1 is not usable as output on this PCB.

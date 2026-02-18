@@ -8,67 +8,38 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-#include "globals.h"
-#include "pins.h"
+#include "globals.hpp"
+#include "pins.hpp"
 #include "clocks.h"
 #include "luts.h"
 #include "events.h"
 #include "comparator.h"
-#include "window_counter.h"
-#include "negative_counter.h"
-#include "tca0.h"
+#include "window_counter.hpp"
+#include "negative_counter.hpp"
+#include "heartbeat.h"
+#include "timer.hpp"
+#include "init.hpp"
+#include "scpi.hpp"
+
+void do_nothing() {
+	;
+}
+
+Timer<Millis> nothing(1000, true, do_nothing);
+
 
 int main(void)
 {
-	uint8_t clock_status = init_clocks();
-
-	if (clock_status == 0) {
-		serial.print("clocks up\n");
-	} else {
-		serial.print("Clock init error: ");
-		if (clock_status & 1) {
-			serial.print("External 24MHz clock failed. ");
-		}
-		if (clock_status & 2) {
-			serial.print("32kHz crystal failed. ");
-		}
-		serial.print("\n");
-	}
-	init_pins();
-	init_adc_clock();
-	init_ac1();
-	init_luts();
-	init_window_counter(7500);
-	init_negative_counter();
+	init_all();
+	scpi_init();
 	sei();
-	ENABLE::set();
-	start_adc_clock();
+
+	nothing.start();
 
 	while (1)
 	{
-
-		
-		if (window_ready) {
-			// DEBUG::set();
-			// DEBUG::clear();
-			window_ready = 0;
-			//start_adc_clock();
-			serial.print("NEG=");
-			serial.print(negative_counts.value, 10);
-			serial.print("\n");
-
-			// serial.print("TCB2CMP=");
-			// serial.print(TCB2.CCMP,10);
-			// serial.print("\n");
-			// serial.print("TCB3CMP=");
-			// serial.print(TCB3.CCMP,10);
-			// serial.print("\n");
-
-			
-			// ENABLE::set();
-			// start_adc_clock();
-
-		}
+		Timer<Millis>::checkAllTimers();
+		scpi_service();
 
 	}
 };

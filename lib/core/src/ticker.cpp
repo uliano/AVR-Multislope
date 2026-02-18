@@ -47,7 +47,7 @@
  * @note After this call, you must define the ISR: ISR(RTC_PIT_vect) { Ticker::ptr->pit(); }
  *
  * @see Ticker::init() for details on Ticker initialization
- * @see ticker.h for complete system documentation
+ * @see ticker.hpp for complete system documentation
  */
 void init_ticker(void){
 

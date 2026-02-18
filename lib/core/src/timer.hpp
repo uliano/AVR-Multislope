@@ -19,7 +19,7 @@
 #include "ticker.hpp"
 #include <string.h> // Required for memcpy
 
-#include "globals.h"
+#include "globals.hpp"
 
 /**
  * @brief Tag types for compile-time time unit enforcement

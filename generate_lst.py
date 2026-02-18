@@ -39,5 +39,34 @@ def generate_listing(source, target, env):  # pylint: disable=unused-argument
     print("  - MAP:    %s" % firmware_map)
     print("  - LST:    %s" % firmware_lst)
 
+def print_rodata_usage():
+    """Print rodata usage at the end of every build (FLMAP block = 32KB)"""
+    import subprocess
+    firmware_elf = env.subst("$BUILD_DIR/${PROGNAME}.elf")  # type: ignore
+    if not os.path.exists(firmware_elf):
+        return
+    objdump = env.subst(env.get("OBJDUMP", "avr-objdump"))  # type: ignore
+    try:
+        result = subprocess.run(
+            [objdump, "-h", firmware_elf],
+            capture_output=True, text=True
+        )
+        for line in result.stdout.splitlines():
+            parts = line.split()
+            if len(parts) >= 3 and parts[1] == ".rodata":
+                rodata_size = int(parts[2], 16)
+                flmap_size = 32768
+                pct = rodata_size * 100.0 / flmap_size
+                filled = int(pct / 10)
+                bar = "=" * filled + " " * (10 - filled)
+                print("Rodata: [%s] %4.1f%% (used %d bytes from %d bytes, FLMAP block)"
+                      % (bar, pct, rodata_size, flmap_size))
+                break
+    except Exception:
+        pass
+
+import atexit
+atexit.register(print_rodata_usage)
+
 # Add post-build action
 env.AddPostAction("$BUILD_DIR/${PROGNAME}.elf", generate_listing)  # type: ignore

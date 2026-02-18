@@ -1,21 +1,20 @@
 /*
- * switching.h
- *
- * AC0 + CCL setup for synchronous K and ENABLE.
+ * luts.h
  *
  * Behavior:
- * - AC0 compares VC (AINP0 on PD2) against VREF (AINN1 on PD0).
- * - LUT2+LUT3 form a DFF that samples AC0 on TCA0 OVF (375 kHz).
- * - LUT4+LUT5 form a DFF that samples ENABLE on TCA0 OVF.
- * - LUT0 selects WO1 or WO2 based on the sampled K level.
- * - LUT1 generates gated clock = ENABLE_SYNC & TCA0 WO0.
- * - count_positive: external AND of K (PD3) and GATED_CLK (PC3) into PA2.
+ * - AC1 compares the integrator output (AINP2 on PD4) against VREF/2.
+ * - LUT2+LUT3 form a DFF that sync AC1 on Heartbeat postive edges (TCA0 WO0).
+ * - LUT0 selects WO1 or WO2 based on the AC_SYNC level (for positive input).
+ * - LUT4 selects WO1 or WO2 based on the AC_SYNC level (for negative input).
+ * - LUT1 generates pulses gating AC_SYNC & TCA0 WO0.
  *
  * Pin mappings (default CCLROUTEA):
- * - LUT2 OUT -> PD3 (K, optional debug)
- * - LUT4 OUT -> PB3 (ENABLE_SYNC), input on PB1 (software-driven)
- * - LUT0 OUT -> PA3 (selected PWM)
- * - LUT1 OUT -> PC3 (gated clock, debug and external AND input)
+ * - LUT2 OUT -> PD3 (optional debug)
+ * - LUT4 OUT -> PB3 
+ * - LUT0 OUT -> PA3
+ * - LUT1 OUT -> PC3 (optional debug)
+ * 
+ * NOTE: LUT5 is still available.
  */
 
 #pragma once
@@ -37,7 +36,7 @@ static inline void init_luts(void)
     CCL.TRUTH0 = 0xD8;//0xD8;// 0xE4; // 0xD8;  // OUT = IN0 ? IN1 : IN2
     CCL.LUT0CTRLA = CCL_OUTEN_bm | CCL_ENABLE_bm;  // Output on PA3
 
-    // LUT1: positive clock = AC_Sync & TCA0 WO0 (debug on PC3)
+    // LUT1: negative clock = AC_Sync & TCA0 WO0 (debug on PC3)
     // IN0 = TCA0 WO0, IN1 = EVENTA (ENABLE_SYNC), IN2 masked (0)
     CCL.LUT1CTRLB = CCL_INSEL0_TCA0_gc | CCL_INSEL1_EVENTA_gc;
     CCL.LUT1CTRLC = CCL_INSEL2_MASK_gc;
@@ -60,8 +59,16 @@ static inline void init_luts(void)
     CCL.TRUTH3 = 0xFF;  // Always 1 (G=1 enables DFF)
     CCL.LUT3CTRLA = CCL_ENABLE_bm;  // No output pin needed
 
+    // LUT4: MUX between WO1 and WO2 based on AC_SYNC (IN0)
+    // IN0 = EVENTA (AC_SYNC), IN1 = TCA0 WO1, IN2 = TCA0 WO2
+    CCL.SEQCTRL0 = CCL_SEQSEL_DISABLE_gc;
+    CCL.LUT4CTRLB = CCL_INSEL0_EVENTA_gc | CCL_INSEL1_TCA0_gc; // AC_SYNC; WO1
+    CCL.LUT4CTRLC = CCL_INSEL2_TCA0_gc; // WO2
+    CCL.TRUTH4 = 0xE4; // 0xD8;  // OUT = IN0 ? IN1 : IN2
+    CCL.LUT4CTRLA = CCL_OUTEN_bm | CCL_ENABLE_bm;  // Output on PB3
+
     // Route LUT0/LUT1/LUT2 outputs to default pins (PA3, PC3, PD3)
-    PORTMUX.CCLROUTEA &= (uint8_t)~(PORTMUX_LUT0_bm | PORTMUX_LUT1_bm | PORTMUX_LUT2_bm);
+    PORTMUX.CCLROUTEA &= (uint8_t)~(PORTMUX_LUT0_bm | PORTMUX_LUT1_bm | PORTMUX_LUT2_bm | PORTMUX_LUT4_bm); // Default routing
 
     // Enable CCL
     CCL.CTRLA = CCL_ENABLE_bm;

@@ -1,11 +1,11 @@
 /*
  * uart.hpp
  *
- * Interrupt-driven UART with double-buffered RX and line-based parsing.
+ * Interrupt-driven UART byte transport.
  *
  * Created: 11/3/2022 4:58:21 PM
  *  Author: uliano
- * Revised: 01/9/2026 - Bug fixes (parse functions, error counters) and documentation
+ * Revised: 01/9/2026 - Transport/parser decoupling and cleanup
  */
 
 
@@ -16,16 +16,16 @@
 #include <util/delay.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include "bytestream.hpp"
 #include "ring.hpp"
 #include "utils.hpp"
 #include "ticker.hpp"
 
 const bool UART_ALTERNATE = true;
 const bool UART_STANDARD = false;
-const uint8_t MAX_TOKEN_LENGTH = 16;
 
 /**
- * @brief Interrupt-driven UART with double-buffered RX and command parsing
+ * @brief Interrupt-driven UART transport implementing ByteStream
  *
  * @tparam uart_num UART peripheral number (0-5)
  * @tparam alternate_pins Use alternate pin mapping (see datasheet)
@@ -35,72 +35,44 @@ const uint8_t MAX_TOKEN_LENGTH = 16;
  * @tparam TSizeT TX index type (uint8_t/uint16_t)
  *
  * Key features:
- * - Double-buffered RX: One buffer receives while the other is being parsed
- * - Line-based protocol: Automatic line detection on '\n' (0x0A)
+ * - Byte-oriented RX/TX buffers (power-of-2 ring buffers)
  * - Interrupt-driven TX: Non-blocking transmission with DRE interrupt
- * - Token parsing: Space-separated tokens with long/ulong conversion
- * - Error counters: TX/RX overflow and parse errors (wrap at 255)
- *
- * Architecture:
- *   m_input_buffer[0] ←→ swap ←→ m_input_buffer[1]
- *        ↑ ISR writes              ↑ Main loop parses
+ * - Error counters: TX/RX overflow (wrap at 255)
  *
  * Usage:
- *   Uart<2, UART_ALTERNATE> serial(115200);
+ *   Uart<2, UART_ALTERNATE> usb(115200);
  *
  *   // In ISR (interrupts.cpp):
- *   ISR(USART2_RXC_vect) { serial.rxc(); }
- *   ISR(USART2_DRE_vect) { serial.dre(); }
+ *   ISR(USART2_RXC_vect) { usb.rxc(); }
+ *   ISR(USART2_DRE_vect) { usb.dre(); }
  *
  *   // In main loop:
- *   serial.receive_line();  // Start receiving
- *   if (serial.can_parse()) {
- *       long value;
- *       if (serial.parse_long(value)) {
- *           // Process value
- *       }
+ *   uint8_t b;
+ *   if (usb.read_byte(b)) {
+ *       // Consume received byte
  *   }
  */
-template <const int uart_num,  bool alternate_pins=false, const int rsize=256, const int tsize=512, typename RSizeT=uint16_t, typename TSizeT=uint16_t>
-class Uart {
-	static_assert((uart_num >= 0) & (uart_num <= 5), "uart can be only 0, 1, 2, 3, 4, or 5");
+template <const int uart_num,  bool alternate_pins=false, const int rsize=256, const int tsize=512, typename RSizeT=uint8_t, typename TSizeT=uint16_t>
+class Uart : public ByteStream {
+	static_assert((uart_num >= 0) && (uart_num <= 5), "uart can be only 0, 1, 2, 3, 4, or 5");
 	static_assert(is_powerof2(rsize), "uart read buffer should be a power of 2");
 	static_assert(is_powerof2(tsize), "uart write buffer should be a power of 2");
 	private:
 	volatile USART_t *regs;
-	Ring<uint8_t, RSizeT, rsize> m_input_buffer[2];  // Double buffer: [0]=current RX, [1]=completed line
-	Ring<uint8_t, TSizeT, tsize> m_output_buffer;    // TX buffer (single)
-	uint8_t m_parse_buffer[MAX_TOKEN_LENGTH];        // Temp buffer for parsing tokens
+	Ring<uint8_t, RSizeT, rsize> m_input_buffer;
+	Ring<uint8_t, TSizeT, tsize> m_output_buffer;
 
-	// Error counters (volatile uint8_t for atomic ISR access, wrap at 255)
-	volatile uint8_t m_tx_errors;			// TX overflow: bytes lost due to full buffer
-	volatile uint8_t m_rx_errors;			// RX overflow: bytes lost due to full buffer
-	uint8_t m_parse_errors;					// Parse errors: token overflow or conversion failure
-	volatile uint8_t m_incomplete_lines;	// Lines overwritten before parsing
-
-	uint8_t m_current_input_buffer_index;   // Buffer currently receiving from ISR (0 or 1)
-	uint8_t m_current_line_buffer_index;    // Buffer with completed line for parsing (0 or 1)
-	bool m_receiving_line; 					// true = accepting line input
-	bool m_can_parse;						// true = complete line ready to parse
-
-
-	inline void input_buffer_swap(void){
-		uint8_t temp = m_current_input_buffer_index;
-		m_current_input_buffer_index = m_current_line_buffer_index;
-		m_current_line_buffer_index = temp;
-	}
+	// Error counters (volatile uint8_t for atomic ISR access, wrap at 255).
+	volatile uint8_t m_tx_errors;
+	volatile uint8_t m_rx_errors;
 
 	public:
+    using ByteStream::write;
+
 	Uart(uint32_t baud=115200)
 	{
 		m_tx_errors = 0;
 		m_rx_errors = 0;
-		m_parse_errors = 0;
-		m_incomplete_lines = 0;
-		m_current_input_buffer_index = 0;
-		m_current_line_buffer_index = 1;
-		m_receiving_line = false;
-		m_can_parse = false;
         if constexpr (uart_num == 0) {
             regs = &USART0;
             if constexpr (alternate_pins) {
@@ -189,100 +161,9 @@ class Uart {
 
 		regs->CTRLA |= USART_RXCIE_bm;
 		// regs->BAUD = uint16_t(float(F_CPU * 64 / (16 * float(baud)) + 0.5));
-		regs->BAUD = uint16_t(F_CPU * 4 / baud);
+		regs->BAUD = uint16_t((F_CPU * 4UL + baud / 2UL) / baud);
 		regs->CTRLB |= USART_TXEN_bm | USART_RXEN_bm;
 		_delay_ms(10); // give a little time with TX high to have a proper start bit
-	}
-
-    uint8_t* parse_string(void) {
-        uint8_t* string = m_parse_buffer;  // `string` is now properly a pointer to `m_parse_buffer`
-        uint8_t len = 1;
-        uint8_t c;
-
-        // Skip leading spaces
-        while (m_input_buffer[m_current_line_buffer_index].get(c) && c == 32);
-
-        // Read token
-        while (len < MAX_TOKEN_LENGTH && c != 32) {
-            if (c == 0x0A) {  // End of line
-                *string = 0;
-                return m_parse_buffer;
-            }
-            *string++ = c;
-            ++len;
-
-            // Attempt to get the next character, break if empty
-            if (!m_input_buffer[m_current_line_buffer_index].get(c)) {
-                break;
-            }
-        }
-
-        // If token length exceeded
-        if (c != 32) {
-            ++m_parse_errors;
-            m_can_parse = false;
-            return 0;
-        }
-
-        *string = 0;
-        return m_parse_buffer;
-    }
-
-    
-	/**
-	 * @brief Parse next token as signed long (decimal base 10)
-	 *
-	 * Extracts next space-separated token and converts to long.
-	 *
-	 * @param value Reference to store parsed value
-	 * @return true if parsing succeeded, false on error
-	 *
-	 * Error conditions:
-	 * - Token too long (>16 chars)
-	 * - No digits found (end == str)
-	 * - Extra characters after number (*end != '\0')
-	 */
-	bool parse_long(long & value){
-		uint8_t* str = parse_string();
-		if (!str) {
-			return false;  // parse_string already set error
-		}
-		char *end;
-		value = strtol((char*)str, &end, 10);
-		if (end == (char*)str || *end != '\0') {
-			++m_parse_errors;
-			m_can_parse = false;
-			return false;
-		}
-		return true;
-	}
-
-	/**
-	 * @brief Parse next token as unsigned long (hexadecimal base 16)
-	 *
-	 * Extracts next space-separated token and converts to unsigned long.
-	 *
-	 * @param value Reference to store parsed value
-	 * @return true if parsing succeeded, false on error
-	 *
-	 * Error conditions:
-	 * - Token too long (>16 chars)
-	 * - No digits found (end == str)
-	 * - Extra characters after number (*end != '\0')
-	 */
-	bool parse_ulong(unsigned long & value){
-		uint8_t* str = parse_string();
-		if (!str) {
-			return false;  // parse_string already set error
-		}
-		char *end;
-		value = strtoul((char*)str, &end, 16);
-		if (end == (char*)str || *end != '\0') {
-			++m_parse_errors;
-			m_can_parse = false;
-			return false;
-		}
-		return true;
 	}
 
     /**
@@ -293,9 +174,9 @@ class Uart {
      */
     inline void dre(void) {
         uint8_t c;
-        if (m_output_buffer.get(c)) {  // Attempt to get a byte
+        if (m_output_buffer.get_from_isr(c)) {  // Attempt to get a byte
             regs->TXDATAL = c;
-            if (!m_output_buffer.size()) {  // Disable DRE interrupt if empty
+            if (!m_output_buffer.size_from_isr()) {  // Disable DRE interrupt if empty
                 regs->CTRLA &= ~USART_DREIE_bm;
             }
         } else {
@@ -308,61 +189,59 @@ class Uart {
 	 * @brief RX Complete interrupt handler
 	 *
 	 * Call this from ISR(USARTx_RXC_vect).
-	 *
-	 * Receives byte and adds to current input buffer. When '\n' (0x0A) is received
-	 * during line mode, swaps buffers so main loop can parse the completed line
-	 * while ISR continues receiving into the other buffer.
-	 *
-	 * Double-buffer algorithm:
-	 * 1. Receive bytes into m_input_buffer[m_current_input_buffer_index]
-	 * 2. On '\n': swap buffer indices
-	 * 3. Main loop parses m_input_buffer[m_current_line_buffer_index]
-	 * 4. ISR continues receiving into the other buffer
+	 * Receives one byte and pushes it into the RX ring buffer.
 	 */
 	inline void rxc(void) {
 		uint8_t value =regs->RXDATAL;
-		if (m_input_buffer[m_current_input_buffer_index].is_full()) {
+		if (!m_input_buffer.try_put_from_isr(value)) {
 			++m_rx_errors;  // Atomic - uint8_t on 8-bit AVR
-		} else {
-			m_input_buffer[m_current_input_buffer_index].put(value);
-			if (m_receiving_line && value == 0x0a) {
-				if (m_can_parse) ++m_incomplete_lines;  // Previous line not parsed yet
-				input_buffer_swap();
-				m_receiving_line = false;
-				m_can_parse = true;
-			}
 		}
 	}
-
-
-
-	inline bool can_parse(void) {
-		return m_can_parse;
-	}
-
-	inline void receive_line(void) {
-		m_receiving_line = true;
-	}
 	
+    bool read_byte(uint8_t &b) override {
+        return m_input_buffer.get(b);
+    }
+
     inline bool receive_byte(uint8_t *b) {
-        return m_input_buffer[m_current_input_buffer_index].get(*b);
+        if (!b) return false;
+        return read_byte(*b);
+    }
+
+	inline uint8_t tx_errors(void) const {
+		return m_tx_errors;
+	}
+
+	inline uint8_t rx_errors(void) const {
+		return m_rx_errors;
+	}
+
+	inline RSizeT rx_size(void) const {
+		return m_input_buffer.size();
+	}
+
+	inline void clear_errors(void) {
+		m_tx_errors = 0;
+		m_rx_errors = 0;
+	}
+
+    bool write_byte(uint8_t b) override {
+		if (!m_output_buffer.try_put(b)) {
+			++m_tx_errors;  // Atomic - uint8_t on 8-bit AVR
+			return false;
+		}
+		regs->CTRLA |= USART_DREIE_bm;
+		return true;
     }
 
 	inline uint8_t send_byte(const uint8_t b){
-		if (m_output_buffer.is_full()) {
-			++m_tx_errors;  // Atomic - uint8_t on 8-bit AVR
-			return 0;
-		}
-		m_output_buffer.put(b);
-		regs->CTRLA |= USART_DREIE_bm;
-		return 1;
+		return write_byte(b) ? 1 : 0;
 	}
 	
-	uint8_t send_buffer(const uint8_t *buffer, const uint8_t len){  
+    uint8_t write(const uint8_t *buffer, uint8_t len) override {
 		uint8_t remaining = len;
 		while(remaining)
 		{
-			const uint8_t result = send_byte(*buffer);
+			const bool result = write_byte(*buffer);
 			if (result) {
 				++buffer;
 				--remaining;
@@ -372,6 +251,10 @@ class Uart {
 			}
 		}
 		return len - remaining;
+	}
+
+	uint8_t send_buffer(const uint8_t *buffer, const uint8_t len){  
+        return write(buffer, len);
 	}
 
 	inline void newline(const bool cr=false) {
